@@ -1,5 +1,7 @@
 using MDSplus
 
+using Printf
+
 function status_ok(stat)
     (stat & 1) == 1
 end
