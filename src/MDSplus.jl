@@ -36,15 +36,18 @@ MdsTypes = Dict{DataType,Int32}(UInt8 => 2, UInt16 => 3, UInt32 => 4, UInt64 => 
                                 Complex{Float32} => 12, Complex{Float64} => 13,
                                 Cstring => 14)
 
-function descr(::Type{T}, s::NTuple{N,Int}, data) where {T,N}
+@generated function descr(mds_type::Int32, s::NTuple{N,T}, data) where {N,T}
     # int descr(int *dtype, void *data, int *dim1, ...);
-    mds_type = MdsTypes[T]
-    ss = Int32[s... , 0]  # Convert to Int32 array and append zero
-    ccall( (:descr, "libMdsLib"), Cint, (Ref{Cint}, Ptr{Cvoid}, Ptr{Cint}), mds_type, Ref(data), ss)
+    args = ((:(Int32(s[$i])) for i=1:N)...,:(zero(Int32)),)
+    ccall_impl =  :(ccall( (:descr, "libMdsLib"), Cint,
+                           (Ref{Cint}, Ptr{Cvoid}, Ref{Cint}...),
+                            mds_type, Ref(data), $(args...)))
+    # println(ccall_impl)
+    return ccall_impl
 end
 
 function descr(data)
-    descr(eltype(data), size(data), data)
+    descr(MdsTypes[eltype(data)], size(data), data)
 end
 
 function MdsConnect(server::AbstractString)
@@ -67,22 +70,31 @@ function MdsSetDefault(node::AbstractString)
     ccall( (:MdsSetDefault, "libMdsLib"), Cint, (Cstring,), node)
 end
 
-function MdsValue(expression::AbstractString, d::Vararg{Int,N}) where N
+@generated function MdsValue(expression::AbstractString, d::Vararg{T,N}) where {T,N}
     # int MdsValue(char *expression, ...);
-    dd = Int32[d...]
-    len = Int32[0]
-    NULL = Int32(0)
-    stat = ccall( (:MdsValue, "libMdsLib"), Cint, (Cstring, Ptr{Cint}, Ref{Cint}, Ptr{Cint}), expression, dd, NULL, len)
-    return stat
+
+    args = ((:(Int32(d[$i])) for i=1:N)...,:(zero(Int32)),:(Int32[0]),)
+
+    ccall_impl =  :(ccall( (:MdsValue, "libMdsLib"), Cint,
+                           (Cstring, Ref{Cint}...),
+                            expression, $(args...)))
+    # println(ccall_impl)
+    return ccall_impl
 end
 
-function MdsPut(node::AbstractString, expression::AbstractString, d::Vararg{Int,N}) where N
+@generated function MdsPut(node::AbstractString, expression::AbstractString, d::Vararg{T,N}) where {T,N}
     # int MdsPut(char *node, char *expression, ...);
-    dd = Int32[d...]
-    ccall( (:Mdsput, "libMdsLib"), Cint, (Cstring, Cstring, Ptr{Cint}), expression, dd, Int32(0))
+
+    args = ((:(Int32(d[$i])) for i=1:N)...,:(zero(Int32)),)
+
+    ccall_impl =  :(ccall( (:MdsPut, "libMdsLib"), Cint,
+                           (Cstring, Cstring, Ref{Cint}...),
+                            expression, $(args...)))
+    # println(ccall_impl)
+    return ccall_impl
 end
 
-function MdsSetSocket(socket::Int)
+function MdsSetSocket(socket)
     ccall( (:MdsSetSocket, "libMdsLib"), Cint, (Ref{Cint},), Int32(socket))
 end
 

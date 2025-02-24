@@ -8,9 +8,9 @@ end
 
 function get_signal_length(sig)
     s = [0]
-    idesc = descr(Int32, size(s), s)
+    idesc = descr(s)
     stat = MdsValue("SIZE($sig)", idesc)
-    return s[1]
+    return s[1] #segfaults here
 end
 
 function run_example(shot)
