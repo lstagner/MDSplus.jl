@@ -41,7 +41,7 @@ MdsTypes = Dict{DataType,Int32}(UInt8 => 2, UInt16 => 3, UInt32 => 4, UInt64 => 
     args = ((:(Int32(s[$i])) for i=1:N)...,:(zero(Int32)),)
     ccall_impl =  :(ccall( (:descr, "libMdsLib"), Cint,
                            (Ref{Cint}, Ptr{Cvoid}, Ref{Cint}...),
-                            mds_type, Ref(data), $(args...)))
+                            mds_type, data, $(args...)))
     # println(ccall_impl)
     return ccall_impl
 end
